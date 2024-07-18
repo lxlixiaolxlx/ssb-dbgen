@@ -1,5 +1,27 @@
 /*
- * Sccsid:     @(#)qgen.c	2.1.8.2
+* $Id: qgen.c,v 1.3 2005/10/28 02:54:35 jms Exp $
+*
+* Revision History
+* ===================
+* $Log: qgen.c,v $
+* Revision 1.3  2005/10/28 02:54:35  jms
+* add release.h changes
+*
+* Revision 1.2  2005/01/03 20:08:59  jms
+* change line terminations
+*
+* Revision 1.1.1.1  2004/11/24 23:31:47  jms
+* re-establish external server
+*
+* Revision 1.1.1.1  2003/04/03 18:54:21  jms
+* recreation after CVS crash
+*
+* Revision 1.1.1.1  2003/04/03 18:54:21  jms
+* initial checkin
+*
+*
+*/
+/*
  * qgen.c -- routines to convert query templates to executable query
  *           text for TPC-H and TPC-R
  */
@@ -8,9 +30,7 @@
 #include <stdio.h>
 #include <string.h>
 #if (defined(_POSIX_)||!defined(WIN32))
-/*
 #include <unistd.h>
-*/
 #else
 #include "process.h"
 #endif /* WIN32 */
@@ -20,6 +40,7 @@
 #include "dss.h"
 #include "tpcd.h"
 #include "permute.h"
+#include "release.h"
 
 
 #define LINE_SIZE 512
@@ -49,6 +70,7 @@ long rndm;
 double flt_scale;
 distribution q13a, q13b;
 int qnum;
+char *db_name = NULL;
 
 
 /*
@@ -243,9 +265,9 @@ char *cptr,
 void
 usage(void)
 {
-printf("%s Parameter Substitution (v. %d.%d.%d%s)\n", 
+printf("%s Parameter Substitution (v. %d.%d.%d build %d)\n", 
           NAME, VERSION,RELEASE,
-            MODIFICATION,PATCH);
+            PATCH,BUILD);
 printf("Copyright %s %s\n", TPC, C_DATES);
 printf("USAGE: %s <options> [ queries ]\n", prog);
 printf("Options:\n");
@@ -279,7 +301,7 @@ process_options(int cnt, char **args)
                 flags |= ANSI;
                 break;
 			case 'b':               /* load distributions from named file */
-				d_path = (char *)malloc(strlen(optarg) + 1);
+				d_path = (char *)malloc((int)strlen(optarg) + 1);
 				MALLOC_CHECK(d_path);
 				strcpy(d_path, optarg);
 				break;
@@ -294,13 +316,13 @@ process_options(int cnt, char **args)
                 exit(0);
                 break;
             case 'i':   /* set stream initialization file name */
-                ifile = malloc(strlen(optarg) + 1);
+                ifile = malloc((int)strlen(optarg) + 1);
                 MALLOC_CHECK(ifile);
                 strcpy(ifile, optarg);
                 flags |= INIT;
                 break;
             case 'l':   /* log parameter usages */
-                lfile = malloc(strlen(optarg) + 1);
+                lfile = malloc((int)strlen(optarg) + 1);
                 MALLOC_CHECK(lfile);
                 strcpy(lfile, optarg);
                 flags |= LOG;
@@ -309,13 +331,13 @@ process_options(int cnt, char **args)
                 flags |= DFLT_NUM;
                 break;
             case 'n':   /* set database name */
-                db_name = malloc(strlen(optarg) + 1);
+                db_name = malloc((int)strlen(optarg) + 1);
                 MALLOC_CHECK(db_name);
                 strcpy(db_name, optarg);
                 flags |= DBASE;
                 break;
             case 'o':   /* set the output path */
-                osuff = malloc(strlen(optarg) + 1);
+                osuff = malloc((int)strlen(optarg) + 1);
                 MALLOC_CHECK(osuff);
                 strcpy(osuff, optarg);
                 flags |=OUTPUT;
@@ -337,7 +359,7 @@ process_options(int cnt, char **args)
 						"Data set integrity is not guaranteed.\n");
                 break;
             case 't':   /* set termination file name */
-                tfile = malloc(strlen(optarg) + 1);
+                tfile = malloc((int)strlen(optarg) + 1);
                 MALLOC_CHECK(tfile);
                 strcpy(tfile, optarg);
                 flags |= TERMINATE;
@@ -360,9 +382,7 @@ process_options(int cnt, char **args)
 int
 setup(void)
 {
-
     asc_date = mk_ascdate();
-
     read_dist(env_config(DIST_TAG, DIST_DFLT), "p_cntr", &p_cntr_set);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "colors", &colors);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "p_types", &p_types_set);
@@ -385,7 +405,7 @@ setup(void)
 }
 
 
-main(int ac, char **av)
+int main(int ac, char **av)
 {
     int i;
     FILE *ifp;
@@ -398,15 +418,15 @@ main(int ac, char **av)
     process_options(ac, av);
     if (flags & VERBOSE)
         fprintf(ofp, 
-	    "-- TPC %s Parameter Substitution (Version %d.%d.%d%s)\n",
-            NAME, VERSION, RELEASE, MODIFICATION, PATCH);
+	    "-- TPC %s Parameter Substitution (Version %d.%d.%d build %d)\n",
+            NAME, VERSION, RELEASE, PATCH, BUILD);
 
     setup();
 
     if (!(flags & DFLT))        /* perturb the RNG */
 	    {
 	    if (!(flags & SEED))
-                rndm = (long)((unsigned)time(NULL) * DSS_PROC);
+                rndm = (long)((unsigned)time(NULL));
 		if (rndm < 0)
 			rndm += 2147483647;
 		Seed[0].value = rndm;
@@ -433,14 +453,14 @@ main(int ac, char **av)
             for (i=optind; i < ac; i++)
                 {
                 char qname[10];
-                sprintf(qname, "%d", SEQUENCE(snum, atoi(av[i])));
+                sprintf(qname, "%ld", SEQUENCE(snum, atoi(av[i])));
                 qsub(qname, flags);
                 }
         else
             for (i=1; i <= QUERIES_PER_SET; i++)
                 {
                 char qname[10];
-                sprintf(qname, "%d", SEQUENCE(snum, i));
+                sprintf(qname, "%ld", SEQUENCE(snum, i));
                 qsub(qname, flags);
                 }
     else

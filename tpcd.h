@@ -1,9 +1,25 @@
+/*
+* $Id: tpcd.h,v 1.2 2005/01/03 20:08:59 jms Exp $
+*
+* Revision History
+* ===================
+* $Log: tpcd.h,v $
+* Revision 1.2  2005/01/03 20:08:59  jms
+* change line terminations
+*
+* Revision 1.1.1.1  2004/11/24 23:31:47  jms
+* re-establish external server
+*
+* Revision 1.1.1.1  2003/04/03 18:54:21  jms
+* recreation after CVS crash
+*
+* Revision 1.1.1.1  2003/04/03 18:54:21  jms
+* initial checkin
+*
+*
+*/
 /*****************************************************************
  *  Title: tpcd.h for TPC D
- *  Sccsid: @(#)tpcd.h	2.1.8.1 
- *  Description:
- *  X
- *
  *****************************************************************
  */
 #define DFLT            0x0001
@@ -51,6 +67,15 @@
 #define SET_DBASE       "database %s ;\n"
 #endif
 
+#ifdef ORACLE
+#define GEN_QUERY_PLAN ""
+#define START_TRAN ""
+#define END_TRAN ""
+#define SET_OUTPUT ""
+#define SET_ROWCOUNT "where rownum <= %d;\n"
+#define SET_DBASE ""
+#endif
+
 #ifdef 	SQLSERVER
 #define GEN_QUERY_PLAN  "set showplan on\nset noexec on\ngo\n"
 #define START_TRAN      "begin transaction\ngo\n"
@@ -81,7 +106,6 @@
 #define MAX_VARS      8 /* max number of host vars in any query */
 #define QLEN_MAX   2048 /* max length of any query */
 #define QUERIES_PER_SET 22
-#define MAX_PIDS 50
 
 EXTERN int flags;
 EXTERN int s_cnt;
